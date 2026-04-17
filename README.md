@@ -134,10 +134,7 @@ MODE SELECTOR
   ├── CHAT MODE
   │     ↓
   │   ORCHESTRATOR
-  │   - analyze complexity
-  │   - detect memory need
-  │   - detect tool need
-  │   - detect whether a tool must be created
+  │   [Prompt: classify request, decide memory/tool/creation need]
   │     ↓
   │   CONTEXT LAYER
   │   - retrieve relevant memory
@@ -150,36 +147,26 @@ MODE SELECTOR
   │   - create new tool if needed and allowed
   │     ↓
   │   VERIFICATION LAYER
-  │   - local check
-  │   - global check
+  │   [Prompt: check correctness and completeness]
   │     ↓
   │   FINAL RESPONSE
   │
   ├── AGENT MODE
   │     ↓
   │   META PLANNER
-  │   - create workflow JSON
-  │   - create task graph / DAG
-  │   - define node contracts
-  │   - define tool needs per node
+  │   [Prompt: create workflow JSON, DAG, node contracts]
   │     ↓
   │   NODE BUILDER
-  │   - create prompts
-  │   - create node I/O schema
-  │   - define tools and validators
+  │   [Prompt: create node prompts, I/O schema, validators]
   │     ↓
   │   FLOW VALIDATOR
-  │   - check schema
-  │   - check dependencies
-  │   - check retry limits
-  │   - check tool registry matches
+  │   [Prompt: validate workflow structure and safety]
   │     ↓
   │   {FLOW VALID?}
   │     ├── NO → REPAIR FLOW LOOP
-  │     │          - fix graph
-  │     │          - fix prompts
-  │     │          - fix tool references
-  │     │          - validate again
+  │     │          [Prompt: fix graph, prompts, tool references]
+  │     │          ↓
+  │     │          validate again
   │     └── YES
   │            ↓
   │      EXECUTION ENGINE
@@ -187,11 +174,7 @@ MODE SELECTOR
   └── AUTO MODE
         ↓
       ROUTER
-      - score task complexity
-      - score tool need
-      - score memory need
-      - score reuse potential
-      - score agent reuse potential
+      [Prompt: score task complexity and route to chat or agent]
         ↓
       {ROUTE?}
         ├── SIMPLE → CHAT PATH
@@ -224,10 +207,7 @@ CONTEXT BUILDER
   - workflow state
   ↓
 TASK PLANNER
-  - convert goal into a DAG or tree
-  - attach contracts to every node
-  - mark dependencies explicitly
-  - mark parallel-safe nodes
+  [Prompt: break goal into DAG/tree with dependencies and contracts]
   ↓
 TASK GRAPH
   ROOT GOAL
@@ -239,21 +219,16 @@ TASK GRAPH
   ↓
 {NODES INDEPENDENT?}
   ├── YES → PARALLEL SCHEDULER
-  │          - run independent nodes together
-  │          - merge only after dependencies resolve
   └── NO → SEQUENTIAL SCHEDULER
-            - run dependent nodes step by step
   ↓
 FOR EACH NODE
   ↓
 TOOL DECIDER
-  - decide if reasoning alone is enough
-  - decide if a tool or code is needed
-  - decide if a new tool must be created
+  [Prompt: decide whether reasoning, existing tool, or new tool is needed]
   ↓
 {TOOL NEEDED?}
   ├── NO → AI WORKER
-  │         - solve node directly
+  │         [Prompt: solve this node using the given context]
   │
   └── YES → TOOL CHECKER
             - search tool registry
@@ -269,41 +244,29 @@ TOOL DECIDER
               │    TOOL RESULT NORMALIZER
               │
               └── NO → TOOL FACTORY
-                       - define tool goal
-                       - generate code
-                       - create input/output schema
-                       - define language and runtime
+                       [Prompt: generate code, schema, runtime, and tool definition]
                        ↓
                      TOOL VALIDATOR
-                       - check correctness
-                       - check safety
-                       - check schema
-                       - run test input
+                       [Prompt: test safety, correctness, and schema]
                        ↓
                      {TOOL VALID?}
                        ├── NO → TOOL REPAIR LOOP
-                       │          - fix code
-                       │          - validate again
+                       │          [Prompt: fix tool code and revalidate]
                        └── YES → TOOL REGISTRY SAVE
                                 - store tool for later use
                                 - update usage metadata
                                 ↓
                               TOOL EXECUTOR
-                                - run created tool
                                 ↓
                               TOOL RESULT NORMALIZER
 
   ↓
 LOCAL VERIFICATION
-  - check node output against contract
-  - check type, completeness, and format
-  - check tool result relevance
+  [Prompt: verify node output against contract]
   ↓
 {LOCAL VERIFY PASS?}
   ├── NO → NODE REPAIR LOOP
-  │          - retry only failed node
-  │          - max retry limit enforced
-  │          - if still failing, escalate
+  │          [Prompt: repair only the failed node]
   └── YES → STORE INTERMEDIATE RESULT
   ↓
 MERGE / AGGREGATE
@@ -314,31 +277,19 @@ MERGE / AGGREGATE
   ↓
 {OUTPUT TOO LARGE?}
   ├── YES → OUTPUT BUILDER
-  │          - split answer into sections
-  │          - build in chunks
-  │          - stitch into one final response
+  │          [Prompt: split and stitch final answer chunks]
   └── NO → continue
   ↓
 GLOBAL VERIFICATION
-  - check full response against original goal
-  - check consistency across sections
-  - check missing requirements
-  - check whether all node contracts are satisfied
-  - check if tool outputs were used correctly
+  [Prompt: check full response against original goal]
   ↓
 {GLOBAL VERIFY PASS?}
   ├── NO → REPAIR CONTROLLER
-  │          - identify broken nodes or merge gaps
-  │          - repair only the failed parts
-  │          - re-run verification
+  │          [Prompt: identify broken parts and fix only those]
   └── YES → FINAL RESPONSE
   ↓
 MEMORY EXTRACTOR
-  - extract stable facts
-  - extract preferences
-  - extract ongoing goals
-  - extract reusable workflow data
-  - ignore temporary noise
+  [Prompt: extract stable facts, preferences, goals, reusable workflow data]
   ↓
 MEMORY POLICY CHECK
   - resolve conflicts
