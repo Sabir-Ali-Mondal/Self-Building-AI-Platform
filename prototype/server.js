@@ -372,13 +372,15 @@ async function createTool(need) {
 async function sandboxExecute(code, input) {
   try {
     const wrapped = `
-      const __input = ${JSON.stringify(input)};
+      const __input = arguments[0];
       ${code}
-      return await execute(__input);
+      return execute(__input);
     `;
-    // eslint-disable-next-line no-new-func
-    const fn = new Function(wrapped);
-    return await fn();
+    // Use AsyncFunction so await works inside generated code
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const fn = new AsyncFunction(wrapped);
+    const result = await fn(input);
+    return result;
   } catch (e) {
     return { error: `Sandbox error: ${e.message}` };
   }
@@ -420,10 +422,22 @@ async function executionEngine(plan, goal, session, onProgress) {
 
   const notify = (msg) => onProgress?.({ type: 'progress', message: msg });
 
-  for (const task of tasks) {
-    // Wait for dependencies
+  // Resolve tasks respecting dependencies — retry queue until all done or stuck
+  const queue = [...tasks];
+  let stuckGuard = 0;
+
+  while (queue.length > 0) {
+    stuckGuard++;
+    if (stuckGuard > tasks.length * tasks.length + 10) {
+      logger('execution_stuck', { remaining: queue.map(t => t.id) });
+      break;
+    }
+
+    const task = queue.shift();
+
+    // If dependencies not yet met, push to back and try later
     if (task.depends_on?.some((d) => !completed.has(d))) {
-      // Simple sequential resolution
+      queue.push(task);
       continue;
     }
 
@@ -562,8 +576,13 @@ function apiServer() {
       try { msg = JSON.parse(raw); } catch { return; }
 
       if (msg.type === 'chat') {
-        const { input, sessionId } = msg;
+        const { input, sessionId, apiKey } = msg;
         if (!input?.trim()) return;
+
+        // Use per-message apiKey if server key not configured
+        if (apiKey && !state.config.openrouterKey) {
+          state.config.openrouterKey = apiKey;
+        }
 
         ws.send(JSON.stringify({ type: 'start' }));
 
@@ -593,7 +612,10 @@ function apiServer() {
   });
 
   app.get('/api/memory', (_req, res) => res.json(memory.getAll()));
-  app.get('/api/tools', (_req, res) => res.json(Object.values(tools.getAll())));
+  app.get('/api/tools', (_req, res) => {
+    const serializable = Object.values(tools.getAll()).map(({ execute, ...rest }) => rest);
+    res.json(serializable);
+  });
   app.get('/api/logs', (_req, res) => res.json(state.logs.slice(-100)));
   app.get('/api/sessions', (_req, res) =>
     res.json(Object.fromEntries(Object.entries(state.sessions).map(([k, v]) => [k, { messageCount: v.messages?.length }])))
