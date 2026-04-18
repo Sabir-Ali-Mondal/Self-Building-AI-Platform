@@ -11,6 +11,74 @@ OPENROUTER_API_KEY=sk-or-v1-... npm start
 
 Open http://localhost:3000
 
+## 🚀 How to Run — Complete Guide
+
+### Prerequisites
+- **Node.js v18+** (check: `node --version`)
+- **An OpenRouter API key** — free at [openrouter.ai/keys](https://openrouter.ai/keys)
+
+### Step 1 — Get the files
+Download the three files maintaining this structure:
+```
+nexus-platform/
+├── server.js
+├── package.json
+└── frontend/
+    └── index.html
+```
+
+### Step 2 — Install dependencies
+```bash
+cd nexus-platform
+npm install
+```
+This installs `express` and `ws`. Nothing else needed — no build step, no TypeScript, no bundler.
+
+### Step 3 — Start the server
+
+**Option A — Key as environment variable (recommended)**
+```bash
+# macOS / Linux
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxx node server.js
+
+# Windows CMD
+set OPENROUTER_API_KEY=sk-or-v1-xxxxxxxx && node server.js
+
+# Windows PowerShell
+$env:OPENROUTER_API_KEY="sk-or-v1-xxxxxxxx"; node server.js
+```
+
+**Option B — Enter key in the browser UI**
+```bash
+node server.js
+```
+The UI will prompt for the key on first load. It gets sent securely over WebSocket per message.
+
+### Step 4 — Open the app
+```
+http://localhost:3000
+```
+
+### Step 5 — Test it works
+Try these in order:
+1. `What is 2847 * 9341?` → should use the calculator tool, return exact answer
+2. `Remember that I prefer TypeScript` → should extract to memory (check sidebar Memory tab)
+3. `Analyze pros and cons of REST vs GraphQL` → should trigger agent mode with a task plan
+4. `Create a tool that reverses a string and test it with "hello world"` → should create + save an AI tool
+
+### Optional: custom port
+```bash
+PORT=8080 OPENROUTER_API_KEY=sk-or-... node server.js
+```
+
+### REST API (no UI needed)
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"input": "What is 100 * 200?", "sessionId": "test1"}'
+```
+
+
 ## Architecture
 
 ```
