@@ -1,17 +1,8 @@
-# NEXUS — Self-Building AI Platform
+# Self-Building AI Platform
 
 A complete AI agent system with chat, memory, dynamic tool creation, DAG task planning, verification, and repair.
 
-## Quick Start
-
-```bash
-npm install
-OPENROUTER_API_KEY=sk-or-v1-... npm start
-```
-
-Open http://localhost:3000
-
-## 🚀 How to Run — Complete Guide
+### How to Run — Complete Guide
 
 ### Prerequisites
 - **Node.js v18+** (check: `node --version`)
@@ -20,7 +11,7 @@ Open http://localhost:3000
 ### Step 1 — Get the files
 Download the three files maintaining this structure:
 ```
-nexus-platform/
+prototype/
 ├── server.js
 ├── package.json
 └── frontend/
@@ -29,7 +20,7 @@ nexus-platform/
 
 ### Step 2 — Install dependencies
 ```bash
-cd nexus-platform
+cd prototype
 npm install
 ```
 This installs `express` and `ws`. Nothing else needed — no build step, no TypeScript, no bundler.
