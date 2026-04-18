@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — Self-Building AI Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --bg2: #0b0f1e;
+    --bg3: #111827;
+    --border: #1e2a40;
+    --border-lit: #2e4070;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #4b5563;
+    --glow: rgba(59,130,246,0.15);
+    --glow2: rgba(6,182,212,0.1);
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,8,16,0.95);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 10px var(--accent2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .model-badge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-tab {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    font-family: var(--mono);
+  }
+
+  .sidebar-tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .sidebar-tab:hover:not(.active) { color: var(--text2); }
+
+  .sidebar-panel {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .sidebar-panel.active { display: flex; flex-direction: column; gap: 8px; }
+
+  .panel-empty {
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    padding: 24px 0;
+    font-style: italic;
+  }
+
+  .memory-item, .tool-item, .log-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .memory-item .mem-type {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+
+  .memory-item .mem-value { color: var(--text); line-height: 1.5; }
+
+  .memory-item .mem-conf {
+    margin-top: 4px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .memory-item .mem-conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .tool-item .tool-name {
+    color: var(--green);
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .tool-item .tool-desc { color: var(--text2); font-size: 10px; }
+  .tool-item .tool-badge {
+    margin-top: 4px;
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background: rgba(16,185,129,0.1);
+    color: var(--green);
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  .log-item {
+    font-size: 10px;
+    color: var(--text3);
+    border-color: transparent;
+    padding: 4px 6px;
+    border-left: 2px solid var(--border);
+  }
+  .log-item.llm { border-left-color: var(--accent); }
+  .log-item.tool { border-left-color: var(--green); }
+  .log-item.error { border-left-color: var(--red); color: var(--red); }
+
+  /* ── CHAT AREA ── */
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Welcome */
+  .welcome {
+    text-align: center;
+    padding: 60px 20px;
+    animation: fadeIn 0.6s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .welcome h1 {
+    font-family: var(--sans);
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+
+  .welcome p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 480px;
+    margin: 0 auto 32px;
+  }
+
+  .capability-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .cap-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cap-card:hover {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.05);
+    transform: translateY(-1px);
+  }
+
+  .cap-card .cap-icon { font-size: 18px; margin-bottom: 6px; }
+  .cap-card .cap-label { font-size: 10px; color: var(--text2); line-height: 1.4; }
+
+  /* Messages */
+  .message {
+    display: flex;
+    gap: 14px;
+    animation: fadeIn 0.3s ease;
+    max-width: 900px;
+  }
+
+  .message.user { flex-direction: row-reverse; align-self: flex-end; }
+  .message.assistant { align-self: flex-start; }
+  .message.system { align-self: center; }
+
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    font-family: var(--sans);
+    font-weight: 800;
+  }
+
+  .message.user .msg-avatar {
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    color: white;
+  }
+
+  .message.assistant .msg-avatar {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+  }
+
+  .message.system .msg-avatar {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-size: 11px;
+  }
+
+  .msg-body { flex: 1; min-width: 0; }
+
+  .msg-meta {
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .msg-content {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .message.user .msg-content {
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+
+  .message.assistant .msg-content {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+
+  .message.system .msg-content {
+    font-size: 11px;
+    color: var(--accent2);
+    font-style: italic;
+    padding: 4px 10px;
+    border-left: 2px solid var(--accent2);
+  }
+
+  /* Plan display */
+  .plan-display {
+    background: var(--bg3);
+    border: 1px solid var(--border-lit);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-top: 8px;
+  }
+
+  .plan-display .plan-title {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 10px;
+  }
+
+  .plan-task {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 11px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .plan-task:last-child { border-bottom: none; }
+
+  .plan-task-id {
+    font-size: 9px;
+    color: var(--text3);
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .plan-task-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--border);
+  }
+  .plan-task-status.done { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .plan-task-status.running { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1s infinite; }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: fit-content;
+  }
+
+  .typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: typing 1.2s ease-in-out infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typing {
+    0%, 100% { opacity: 0.3; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* ── INPUT AREA ── */
+  .input-area {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    background: rgba(5,8,16,0.95);
+    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  #input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+    min-height: 48px;
+    max-height: 160px;
+    transition: border-color 0.2s;
+  }
+
+  #input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow); }
+  #input::placeholder { color: var(--text3); }
+
+  #send-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  #send-btn:hover { background: #60a5fa; transform: scale(1.02); }
+  #send-btn:active { transform: scale(0.97); }
+  #send-btn:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+  #send-btn svg { width: 18px; height: 18px; fill: white; }
+
+  .input-hint {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 8px;
+    display: flex;
+    gap: 16px;
+  }
+
+  .input-hint kbd {
+    font-family: var(--mono);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 9px;
+  }
+
+  /* Mode indicator */
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+
+  .mode-btn {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.2s;
+  }
+
+  .mode-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.05);
+  }
+
+  .mode-btn:hover:not(.active) { color: var(--text2); border-color: var(--border-lit); }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 200px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .right-section { }
+
+  .right-section-title {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    padding: 3px 0;
+  }
+
+  .stat-label { color: var(--text3); }
+  .stat-value { color: var(--accent2); font-weight: 700; }
+
+  .clear-btn {
+    width: 100%;
+    padding: 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* API key setup */
+  #api-setup {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(5,8,16,0.97);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+
+  .setup-card {
+    background: var(--bg2);
+    border: 1px solid var(--border-lit);
+    border-radius: 10px;
+    padding: 40px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 0 60px rgba(59,130,246,0.1);
+  }
+
+  .setup-card h2 {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .setup-card p {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+
+  .setup-card a { color: var(--accent2); }
+
+  .setup-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+
+  .setup-input:focus { border-color: var(--accent); }
+
+  .setup-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .setup-btn:hover { background: #60a5fa; }
+
+  .setup-skip {
+    display: block;
+    text-align: center;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--text3);
+    cursor: pointer;
+  }
+  .setup-skip:hover { color: var(--text2); }
+
+  /* Scrollbar */
+  .sidebar-panel::-webkit-scrollbar, .right-panel::-webkit-scrollbar { width: 3px; }
+  .sidebar-panel::-webkit-scrollbar-track, .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-panel::-webkit-scrollbar-thumb, .right-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+  @media (max-width: 900px) {
+    .right-panel { display: none; }
+    .sidebar { width: 220px; }
+  }
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    #messages { padding: 16px; }
+    .input-area { padding: 12px 16px; }
+    .capability-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- API Key Setup Modal -->
+<div id="api-setup">
+  <div class="setup-card">
+    <h2>NEXUS</h2>
+    <p>Self-Building AI Platform. Enter your <a href="https://openrouter.ai/keys" target="_blank">OpenRouter API key</a> to enable AI capabilities. The key is stored only in this browser session.</p>
+    <input class="setup-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+    <button class="setup-btn" onclick="saveApiKey()">CONNECT →</button>
+    <span class="setup-skip" onclick="skipSetup()">Skip (limited mode)</span>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    NEXUS
+  </div>
+  <div class="header-right">
+    <div class="model-badge" id="model-badge">gemini-2.5-flash</div>
+    <div class="status-dot" id="status-dot"></div>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" onclick="switchTab('memory', this)">Memory</button>
+      <button class="sidebar-tab" onclick="switchTab('tools', this)">Tools</button>
+      <button class="sidebar-tab" onclick="switchTab('logs', this)">Logs</button>
+    </div>
+    <div class="sidebar-panel active" id="panel-memory">
+      <div class="panel-empty" id="memory-empty">No memories yet</div>
+    </div>
+    <div class="sidebar-panel" id="panel-tools">
+      <!-- built-in tools injected here -->
+    </div>
+    <div class="sidebar-panel" id="panel-logs">
+      <div class="panel-empty">Logs appear here</div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area">
+    <div id="messages">
+      <div class="welcome" id="welcome">
+        <h1>NEXUS</h1>
+        <p>Self-building AI platform. Chat directly or let the agent plan, execute, verify, and repair complex multi-step tasks automatically.</p>
+        <div class="capability-grid">
+          <div class="cap-card" onclick="sendPrompt('What can you do?')">
+            <div class="cap-icon">🧠</div>
+            <div class="cap-label">Multi-step reasoning & planning</div>
+          </div>
+          <div class="cap-card" onclick="sendPrompt('Create a tool that converts Celsius to Fahrenheit and test it')">
+            <div class="cap-icon">🔧</div>
+            <div class="cap-label">Dynamic tool creation & reuse</div>
+          </div>
+          <div class="cap-card" onclick="sendPrompt('Analyze the pros and cons of 3 programming languages for a startup')">
+            <div class="cap-icon">📊</div>
+            <div class="cap-label">Complex analysis with DAG tasks</div>
+          </div>
+          <div class="cap-card" onclick="sendPrompt('What is 2847 * 9341?')">
+            <div class="cap-icon">🔢</div>
+            <div class="cap-label">Exact computation via tools</div>
+          </div>
+          <div class="cap-card" onclick="sendPrompt('Remember that I prefer Python for backend work')">
+            <div class="cap-icon">💾</div>
+            <div class="cap-label">Persistent memory & recall</div>
+          </div>
+          <div class="cap-card" onclick="sendPrompt('Build a step-by-step plan for launching a SaaS product')">
+            <div class="cap-icon">🗺️</div>
+            <div class="cap-label">Agent mode workflow builder</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="mode-row">
+        <button class="mode-btn active" id="mode-auto" onclick="setMode('auto', this)">Auto</button>
+        <button class="mode-btn" id="mode-chat" onclick="setMode('chat', this)">Chat</button>
+        <button class="mode-btn" id="mode-agent" onclick="setMode('agent', this)">Agent</button>
+        <span style="font-size:10px; color:var(--text3); margin-left:auto;" id="mode-desc">Auto-selects chat or agent</span>
+      </div>
+      <div class="input-row">
+        <div class="input-wrapper">
+          <textarea id="input" placeholder="Ask anything or give a complex goal..." rows="1"></textarea>
+        </div>
+        <button id="send-btn" onclick="sendMessage()" title="Send">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">
+        <span><kbd>Enter</kbd> to send</span>
+        <span><kbd>Shift+Enter</kbd> newline</span>
+        <span id="session-id-hint" style="margin-left:auto;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="right-section">
+      <div class="right-section-title">Session</div>
+      <div class="stat-row"><span class="stat-label">Messages</span><span class="stat-value" id="stat-msgs">0</span></div>
+      <div class="stat-row"><span class="stat-label">Memory</span><span class="stat-value" id="stat-mem">0</span></div>
+      <div class="stat-row"><span class="stat-label">Tools</span><span class="stat-value" id="stat-tools">0</span></div>
+    </div>
+    <div class="right-section">
+      <div class="right-section-title">Actions</div>
+      <button class="clear-btn" onclick="clearSession()">Clear Session</button>
+    </div>
+    <div class="right-section">
+      <div class="right-section-title">Status</div>
+      <div id="status-text" style="font-size:11px; color:var(--text3); line-height:1.6;">Ready</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SESSION_ID = 'session_' + Math.random().toString(36).slice(2, 8);
+let ws = null;
+let msgCount = 0;
+let isProcessing = false;
+let currentMode = 'auto';
+let apiKey = '';
+
+document.getElementById('session-id-hint').textContent = SESSION_ID;
+
+// ── API KEY ──
+function saveApiKey() {
+  apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) return alert('Please enter an API key');
+  document.getElementById('api-setup').style.display = 'none';
+  initWS();
+  loadSidebarData();
+}
+
+function skipSetup() {
+  document.getElementById('api-setup').style.display = 'none';
+  initWS();
+  loadSidebarData();
+}
+
+// ── WEBSOCKET ──
+function initWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen = () => setStatus('Connected', true);
+  ws.onclose = () => { setStatus('Disconnected', false); setTimeout(initWS, 3000); };
+  ws.onerror = () => setStatus('Error', false);
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    handleWSMessage(msg);
+  };
+}
+
+function handleWSMessage(msg) {
+  if (msg.type === 'start') {
+    removeTypingIndicator();
+    addTypingIndicator();
+  } else if (msg.type === 'status') {
+    updateStatus(msg.message);
+  } else if (msg.type === 'progress') {
+    updateStatus(msg.message);
+  } else if (msg.type === 'plan') {
+    showPlan(msg.plan);
+  } else if (msg.type === 'done') {
+    removeTypingIndicator();
+    addMessage('assistant', msg.result.content);
+    setProcessing(false);
+    loadSidebarData();
+  } else if (msg.type === 'error') {
+    removeTypingIndicator();
+    addMessage('system', '⚠ ' + msg.message);
+    setProcessing(false);
+  }
+}
+
+// ── SEND ──
+function sendMessage() {
+  const input = document.getElementById('input');
+  const text = input.value.trim();
+  if (!text || isProcessing) return;
+
+  hideWelcome();
+  input.value = '';
+  input.style.height = 'auto';
+
+  addMessage('user', text);
+  setProcessing(true);
+  msgCount++;
+  document.getElementById('stat-msgs').textContent = msgCount;
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    addMessage('system', 'Not connected. Retrying...');
+    setProcessing(false);
+    return;
+  }
+
+  ws.send(JSON.stringify({ type: 'chat', input: text, sessionId: SESSION_ID, apiKey, mode: currentMode }));
+}
+
+function sendPrompt(text) {
+  document.getElementById('input').value = text;
+  sendMessage();
+}
+
+// ── MESSAGES ──
+function addMessage(role, content) {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = `message ${role}`;
+
+  const avatarText = role === 'user' ? 'U' : role === 'assistant' ? 'N' : '·';
+  const metaText = role === 'user' ? 'YOU' : role === 'assistant' ? 'NEXUS' : 'SYSTEM';
+
+  el.innerHTML = `
+    <div class="msg-avatar">${avatarText}</div>
+    <div class="msg-body">
+      <div class="msg-meta">${metaText} · ${new Date().toLocaleTimeString()}</div>
+      <div class="msg-content">${escHtml(content)}</div>
+    </div>
+  `;
+
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+let planEl = null;
+function showPlan(plan) {
+  const msgs = document.getElementById('messages');
+  planEl = document.createElement('div');
+  planEl.className = 'message assistant';
+  const tasks = plan.tasks || [];
+  planEl.innerHTML = `
+    <div class="msg-avatar">N</div>
+    <div class="msg-body">
+      <div class="msg-meta">NEXUS · TASK PLAN</div>
+      <div class="plan-display">
+        <div class="plan-title">⬡ EXECUTION PLAN — ${tasks.length} TASKS</div>
+        ${tasks.map(t => `
+          <div class="plan-task" id="pt-${t.id}">
+            <div class="plan-task-id">${t.id}</div>
+            <div class="plan-task-status" id="ps-${t.id}"></div>
+            <div>${escHtml(t.name)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  msgs.appendChild(planEl);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTypingIndicator() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'message assistant';
+  el.id = 'typing-indicator';
+  el.innerHTML = `
+    <div class="msg-avatar">N</div>
+    <div class="msg-body">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  `;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  document.getElementById('typing-indicator')?.remove();
+}
+
+// ── SIDEBAR ──
+function switchTab(tab, btn) {
+  document.querySelectorAll('.sidebar-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+async function loadSidebarData() {
+  try {
+    const [memRes, toolRes, logRes] = await Promise.all([
+      fetch('/api/memory'),
+      fetch('/api/tools'),
+      fetch('/api/logs'),
+    ]);
+    const mems = await memRes.json();
+    const toolList = await toolRes.json();
+    const logs = await logRes.json();
+
+    // Memory
+    const memPanel = document.getElementById('panel-memory');
+    document.getElementById('memory-empty')?.remove();
+    const existingMems = memPanel.querySelectorAll('.memory-item');
+    existingMems.forEach(e => e.remove());
+    mems.slice(-20).reverse().forEach(m => {
+      const el = document.createElement('div');
+      el.className = 'memory-item';
+      el.innerHTML = `
+        <div class="mem-type">${m.type}</div>
+        <div class="mem-value">${escHtml(m.value)}</div>
+        <div class="mem-conf"><div class="mem-conf-fill" style="width:${Math.round(m.confidence * 100)}%"></div></div>
+      `;
+      memPanel.appendChild(el);
+    });
+    if (!mems.length) {
+      const empty = document.createElement('div');
+      empty.className = 'panel-empty';
+      empty.id = 'memory-empty';
+      empty.textContent = 'No memories yet';
+      memPanel.appendChild(empty);
+    }
+
+    // Tools
+    const toolPanel = document.getElementById('panel-tools');
+    toolPanel.innerHTML = '';
+    toolList.forEach(t => {
+      const el = document.createElement('div');
+      el.className = 'tool-item';
+      el.innerHTML = `
+        <div class="tool-name">${escHtml(t.name)}</div>
+        <div class="tool-desc">${escHtml(t.description || '')}</div>
+        ${t.created_by === 'ai' ? '<span class="tool-badge">AI CREATED</span>' : ''}
+      `;
+      toolPanel.appendChild(el);
+    });
+
+    // Logs
+    const logPanel = document.getElementById('panel-logs');
+    logPanel.innerHTML = '';
+    logs.slice(-40).reverse().forEach(l => {
+      const el = document.createElement('div');
+      const cls = l.event.includes('llm') ? 'llm' : l.event.includes('tool') ? 'tool' : l.event.includes('error') ? 'error' : '';
+      el.className = `log-item ${cls}`;
+      el.textContent = `${l.event}`;
+      logPanel.appendChild(el);
+    });
+
+    // Stats
+    document.getElementById('stat-mem').textContent = mems.length;
+    document.getElementById('stat-tools').textContent = toolList.length;
+  } catch {}
+}
+
+// ── UTILS ──
+function setStatus(msg, ok) {
+  document.getElementById('status-dot').style.background = ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('status-dot').style.boxShadow = ok ? '0 0 8px var(--green)' : '0 0 8px var(--red)';
+}
+
+function updateStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+function setProcessing(v) {
+  isProcessing = v;
+  document.getElementById('send-btn').disabled = v;
+  if (!v) updateStatus('Ready');
+}
+
+function hideWelcome() {
+  document.getElementById('welcome')?.remove();
+}
+
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const descs = { auto: 'Auto-selects chat or agent', chat: 'Direct response mode', agent: 'Full planning & execution' };
+  document.getElementById('mode-desc').textContent = descs[mode];
+}
+
+function clearSession() {
+  fetch(`/api/session/${SESSION_ID}`, { method: 'DELETE' });
+  document.getElementById('messages').innerHTML = '';
+  msgCount = 0;
+  document.getElementById('stat-msgs').textContent = 0;
+  updateStatus('Session cleared');
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── INPUT AUTO-RESIZE ──
+const inputEl = document.getElementById('input');
+inputEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
+
+inputEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Poll sidebar every 10s
+setInterval(loadSidebarData, 10000);
+</script>
+</body>
+</html>
