@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS v2 — Self-Building AI Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════
+   DESIGN: Industrial dark with amber accents.
+   IBM Plex Mono for data/code, Outfit for UI.
+   Grid paper background. Wiring aesthetic.
+══════════════════════════════════════════════ */
+:root {
+  --bg:       #0d0d0f;
+  --bg2:      #131316;
+  --bg3:      #1a1a1f;
+  --bg4:      #212128;
+  --border:   #2a2a35;
+  --border2:  #383848;
+  --amber:    #f59e0b;
+  --amber2:   #fbbf24;
+  --blue:     #3b82f6;
+  --cyan:     #22d3ee;
+  --green:    #34d399;
+  --red:      #f87171;
+  --purple:   #a78bfa;
+  --text:     #e8e8f0;
+  --text2:    #8888a8;
+  --text3:    #44445a;
+  --mono: 'IBM Plex Mono', monospace;
+  --ui:   'Outfit', sans-serif;
+  --glow-amber: 0 0 14px rgba(245,158,11,0.4);
+  --glow-blue:  0 0 14px rgba(59,130,246,0.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Grid paper background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(245,158,11,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.025) 1px, transparent 1px),
+    linear-gradient(rgba(245,158,11,0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.01) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ══ HEADER ══ */
+header {
+  position: relative; z-index: 100;
+  display: flex; align-items: center; gap: 0;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(13,13,15,0.98);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+
+.logo-block {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 20px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+}
+
+.logo-icon {
+  width: 28px; height: 28px;
+  border: 2px solid var(--amber);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  color: var(--amber);
+  box-shadow: var(--glow-amber);
+  position: relative;
+}
+
+.logo-icon::before {
+  content: '';
+  position: absolute; inset: 2px;
+  border-radius: 3px;
+  background: rgba(245,158,11,0.08);
+}
+
+.logo-text { font-family: var(--ui); font-weight: 800; font-size: 15px; letter-spacing: 0.15em; color: var(--text); }
+
+.nav-tabs {
+  display: flex; height: 100%; align-items: center;
+  padding: 0 8px; gap: 2px;
+}
+
+.nav-tab {
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text2);
+  background: none; border: none; cursor: pointer;
+  border-radius: 5px;
+  transition: all 0.15s;
+  font-family: var(--ui);
+  position: relative;
+}
+
+.nav-tab.active { color: var(--amber); background: rgba(245,158,11,0.08); }
+.nav-tab:hover:not(.active) { color: var(--text); background: var(--bg3); }
+
+.header-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px;
+}
+
+.ai-badge {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--text3); border: 1px solid var(--border);
+  padding: 3px 8px; border-radius: 3px;
+  display: flex; align-items: center; gap: 5px;
+}
+
+.status-led {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+  animation: blink 3s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ══ MAIN LAYOUT ══ */
+.main { display: flex; flex: 1; overflow: hidden; position: relative; z-index: 1; }
+
+/* ══ LEFT SIDEBAR ══ */
+.sidebar {
+  width: 58px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 0; gap: 4px;
+  overflow: hidden;
+}
+
+.sidebar-icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: none; background: none;
+  color: var(--text3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: all 0.15s;
+  position: relative;
+}
+
+.sidebar-icon-btn:hover { background: var(--bg3); color: var(--text); }
+.sidebar-icon-btn.active { background: rgba(245,158,11,0.1); color: var(--amber); }
+.sidebar-icon-btn .badge {
+  position: absolute; top: 4px; right: 4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--amber); color: var(--bg);
+  font-size: 8px; font-weight: 700; font-family: var(--mono);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ══ CONTENT AREA (tabbed) ══ */
+.content { flex: 1; display: flex; overflow: hidden; }
+
+/* ══ CHAT PANEL ══ */
+.panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.panel.active { display: flex; }
+
+/* ── Chat messages ── */
+#messages {
+  flex: 1; overflow-y: auto;
+  padding: 28px 32px;
+  display: flex; flex-direction: column; gap: 22px;
+  scroll-behavior: smooth;
+}
+
+#messages::-webkit-scrollbar { width: 4px; }
+#messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Welcome screen */
+.welcome {
+  padding: 60px 20px;
+  text-align: center;
+  animation: fadeUp 0.5s ease;
+}
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+
+.welcome-logo {
+  font-family: var(--ui); font-weight: 800; font-size: 44px;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  text-shadow: 0 0 40px rgba(245,158,11,0.3);
+  margin-bottom: 6px;
+}
+
+.welcome-sub {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  color: var(--text3); text-transform: uppercase; margin-bottom: 32px;
+}
+
+.quickstart-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; max-width: 600px; margin: 0 auto 24px;
+}
+
+.qs-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 12px;
+  text-align: left; cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qs-card:hover { border-color: var(--amber); background: rgba(245,158,11,0.04); transform: translateY(-2px); }
+.qs-card .icon { font-size: 22px; margin-bottom: 8px; }
+.qs-card .label { font-size: 11px; color: var(--text2); line-height: 1.5; font-family: var(--mono); }
+
+/* Message bubbles */
+.msg { display: flex; gap: 12px; animation: fadeUp 0.25s ease; max-width: 980px; }
+.msg.user { flex-direction: row-reverse; align-self: flex-end; }
+.msg.assistant, .msg.system { align-self: flex-start; }
+
+.msg-av {
+  width: 30px; height: 30px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+.msg.user .msg-av { background: linear-gradient(135deg, var(--amber), var(--amber2)); color: var(--bg); }
+.msg.assistant .msg-av { background: var(--bg3); border: 1px solid var(--border2); color: var(--amber); }
+.msg.system .msg-av { background: var(--bg3); border: 1px solid var(--border); color: var(--text3); font-size: 10px; }
+
+.msg-body { flex: 1; min-width: 0; }
+.msg-meta { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 5px; }
+
+.msg-content {
+  font-size: 13.5px; line-height: 1.85; color: var(--text);
+  word-break: break-word; white-space: pre-wrap;
+}
+
+.msg.user .msg-content {
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.18);
+  border-radius: 8px; padding: 10px 14px;
+}
+
+.msg.assistant .msg-content {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+}
+
+.msg.system .msg-content {
+  font-size: 11px; font-family: var(--mono);
+  color: var(--cyan); padding: 4px 10px;
+  border-left: 2px solid var(--cyan);
+}
+
+/* Attachment preview in message */
+.msg-attachments {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+}
+
+.att-chip {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 4px 8px;
+  font-size: 10px; font-family: var(--mono); color: var(--text2);
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* Plan display */
+.plan-card {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 14px; margin-top: 8px;
+}
+
+.plan-title {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+}
+
+.plan-node {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; font-size: 11px; font-family: var(--mono); color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-node:last-child { border-bottom: none; }
+.plan-node-id { width: 26px; font-size: 9px; color: var(--text3); flex-shrink: 0; }
+
+.plan-node-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--border);
+}
+
+.plan-node-dot.pending {}
+.plan-node-dot.running { background: var(--amber); box-shadow: var(--glow-amber); animation: blink 0.8s infinite; }
+.plan-node-dot.done { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.plan-node-dot.error { background: var(--red); }
+
+/* Typing dots */
+.typing {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px 14px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px; width: fit-content;
+}
+
+.typing-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--amber2); animation: tdot 1.1s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes tdot { 0%,100%{opacity:0.2;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
+
+/* ── INPUT AREA ── */
+.input-area {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  background: rgba(13,13,15,0.98);
+  flex-shrink: 0;
+}
+
+/* File attachment preview */
+.attachment-bar {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+}
+
+.att-preview {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 5px 9px;
+  font-size: 11px; font-family: var(--mono); color: var(--text2);
+  display: flex; align-items: center; gap: 6px;
+}
+
+.att-preview img { width: 28px; height: 28px; object-fit: cover; border-radius: 3px; }
+
+.att-remove {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px;
+}
+.att-remove:hover { color: var(--red); }
+
+/* Mode chips */
+.mode-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+
+.mode-chip {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text3); cursor: pointer; font-family: var(--mono);
+  transition: all 0.15s;
+}
+
+.mode-chip.active { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.07); }
+.mode-chip:hover:not(.active) { color: var(--text); border-color: var(--border2); }
+
+.mode-hint { margin-left: auto; font-size: 10px; font-family: var(--mono); color: var(--text3); }
+
+/* Input row */
+.input-row { display: flex; gap: 8px; align-items: flex-end; }
+
+#input-box {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 12px 14px;
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  resize: none; outline: none; line-height: 1.6;
+  min-height: 46px; max-height: 180px;
+  transition: border-color 0.2s;
+}
+
+#input-box:focus { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(245,158,11,0.1); }
+#input-box::placeholder { color: var(--text3); }
+
+.btn-upload {
+  width: 46px; height: 46px; border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: all 0.15s; flex-shrink: 0;
+}
+
+.btn-upload:hover { border-color: var(--amber); color: var(--amber); }
+
+.btn-send {
+  width: 46px; height: 46px; border-radius: 8px;
+  background: var(--amber); border: none;
+  color: var(--bg); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+  font-size: 18px;
+}
+
+.btn-send:hover { background: var(--amber2); transform: scale(1.04); }
+.btn-send:active { transform: scale(0.96); }
+.btn-send:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+
+#file-input { display: none; }
+
+.input-hint {
+  margin-top: 7px; font-size: 10px; font-family: var(--mono); color: var(--text3);
+  display: flex; gap: 12px; align-items: center;
+}
+
+.input-hint kbd {
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 1px 5px; border-radius: 2px; font-family: var(--mono); font-size: 9px;
+}
+
+/* ══ CANVAS PANEL (n8n-like) ══ */
+#panel-canvas {
+  flex: 1; overflow: hidden;
+  position: relative;
+}
+
+.canvas-toolbar {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  display: flex; gap: 6px; align-items: center;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 6px 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.canvas-btn {
+  padding: 5px 12px; border-radius: 5px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
+  border: 1px solid var(--border); background: none; color: var(--text2);
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 5px;
+}
+
+.canvas-btn:hover { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.05); }
+.canvas-btn.primary { background: var(--amber); border-color: var(--amber); color: var(--bg); font-weight: 700; }
+.canvas-btn.primary:hover { background: var(--amber2); }
+
+.canvas-sep { width: 1px; height: 20px; background: var(--border); }
+
+/* SVG canvas */
+#workflow-canvas {
+  width: 100%; height: 100%;
+  overflow: visible;
+  cursor: grab;
+  background: transparent;
+}
+
+#workflow-canvas:active { cursor: grabbing; }
+
+/* Workflow nodes */
+.wf-node {
+  cursor: pointer;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
+  transition: filter 0.15s;
+}
+
+.wf-node:hover { filter: drop-shadow(0 4px 14px rgba(245,158,11,0.3)); }
+
+.wf-node rect {
+  stroke-width: 1.5px;
+  rx: 8; ry: 8;
+}
+
+.wf-node.pending rect   { fill: #1a1a1f; stroke: #383848; }
+.wf-node.running rect   { fill: #1f1a0a; stroke: #f59e0b; }
+.wf-node.done rect      { fill: #0a1f14; stroke: #34d399; }
+.wf-node.error rect     { fill: #1f0a0a; stroke: #f87171; }
+.wf-node.selected rect  { stroke: #fbbf24; stroke-width: 2px; }
+
+.wf-node .node-title    { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; fill: #e8e8f0; }
+.wf-node .node-sub      { font-family: 'IBM Plex Mono', monospace; font-size: 9px; fill: #8888a8; }
+.wf-node .node-id-badge { font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 700; fill: #44445a; }
+
+.wf-edge { fill: none; stroke: #383848; stroke-width: 1.5; marker-end: url(#arrowhead); }
+.wf-edge.active { stroke: #f59e0b; stroke-width: 2; animation: dash 1s linear infinite; }
+
+@keyframes dash { to { stroke-dashoffset: -20; } }
+
+/* Canvas empty state */
+.canvas-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+
+.canvas-empty p {
+  font-family: var(--mono); font-size: 12px; color: var(--text3);
+  text-align: center; max-width: 320px; line-height: 1.8; margin-top: 12px;
+}
+
+/* ══ SIDE PANELS (memory/tools/agents/logs) ══ */
+.right-drawer {
+  width: 300px; flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-header {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 10px; font-family: var(--mono);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.drawer-body { flex: 1; overflow-y: auto; padding: 10px; }
+.drawer-body::-webkit-scrollbar { width: 3px; }
+.drawer-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Cards in drawers */
+.dcard {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px; margin-bottom: 8px;
+  font-size: 11px; font-family: var(--mono);
+}
+
+.dcard-label {
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 4px;
+}
+
+.dcard-value { color: var(--text); line-height: 1.6; }
+
+.dcard-meta { font-size: 9px; color: var(--text3); margin-top: 4px; }
+
+.dcard-bar {
+  height: 2px; background: var(--border); border-radius: 1px;
+  overflow: hidden; margin-top: 6px;
+}
+
+.dcard-bar-fill { height: 100%; background: linear-gradient(90deg, var(--amber), var(--cyan)); }
+
+.tool-badge {
+  display: inline-block; font-size: 8px; padding: 1px 6px;
+  border-radius: 2px; border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.07); color: var(--amber);
+  margin-top: 4px;
+}
+
+.tool-badge.builtin { border-color: rgba(34,211,238,0.3); background: rgba(34,211,238,0.07); color: var(--cyan); }
+
+.log-row {
+  padding: 3px 6px; font-size: 10px; font-family: var(--mono);
+  color: var(--text3); border-left: 2px solid transparent;
+  margin-bottom: 2px; line-height: 1.5;
+}
+
+.log-row.ai    { border-left-color: var(--amber); }
+.log-row.tool  { border-left-color: var(--green); }
+.log-row.error { border-left-color: var(--red); color: var(--red); }
+.log-row.agent { border-left-color: var(--purple); }
+
+.agent-card {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 12px; margin-bottom: 8px;
+}
+
+.agent-name { font-weight: 700; color: var(--amber); margin-bottom: 4px; font-size: 12px; }
+.agent-desc { font-size: 10px; color: var(--text2); line-height: 1.5; margin-bottom: 8px; }
+.agent-nodes { font-size: 9px; color: var(--text3); font-family: var(--mono); }
+
+.run-agent-btn {
+  margin-top: 8px; padding: 5px 12px;
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+  color: var(--amber); font-family: var(--mono); font-size: 10px;
+  border-radius: 4px; cursor: pointer; transition: all 0.15s;
+}
+
+.run-agent-btn:hover { background: rgba(245,158,11,0.2); }
+
+/* ══ NODE DETAIL PANEL ══ */
+.node-detail {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 340px; z-index: 30;
+  background: var(--bg2); border-left: 1px solid var(--border2);
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.25s ease;
+  overflow: hidden;
+}
+
+.node-detail.open { transform: translateX(0); }
+
+.nd-header {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.nd-title { font-weight: 700; font-size: 13px; color: var(--text); }
+.nd-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 18px; }
+.nd-close:hover { color: var(--text); }
+
+.nd-body { flex: 1; overflow-y: auto; padding: 14px; }
+
+.nd-section { margin-bottom: 16px; }
+.nd-section-title { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+
+.nd-field { margin-bottom: 8px; }
+.nd-field label { font-size: 10px; color: var(--text3); font-family: var(--mono); display: block; margin-bottom: 3px; }
+.nd-field pre {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 8px; font-size: 10px; font-family: var(--mono);
+  color: var(--cyan); line-height: 1.6; overflow-x: auto; white-space: pre-wrap;
+}
+
+/* ══ API SETUP MODAL ══ */
+#api-modal {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(13,13,15,0.96);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.modal-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 40px; width: 440px;
+  box-shadow: 0 0 60px rgba(245,158,11,0.1);
+}
+
+.modal-card h2 {
+  font-family: var(--ui); font-weight: 800; font-size: 22px;
+  color: var(--amber); letter-spacing: 0.05em; margin-bottom: 6px;
+}
+
+.modal-card p { font-size: 12px; color: var(--text2); line-height: 1.8; margin-bottom: 20px; }
+.modal-card a { color: var(--cyan); }
+
+.modal-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 11px 14px;
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  outline: none; margin-bottom: 10px;
+}
+
+.modal-input:focus { border-color: var(--amber); }
+
+.provider-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+
+.provider-chip {
+  flex: 1; padding: 7px; text-align: center;
+  font-size: 10px; font-family: var(--mono);
+  border: 1px solid var(--border); border-radius: 5px;
+  background: none; color: var(--text3); cursor: pointer;
+  transition: all 0.15s;
+}
+
+.provider-chip.sel { border-color: var(--amber); color: var(--amber); background: rgba(245,158,11,0.07); }
+
+.modal-btn {
+  width: 100%; padding: 12px; background: var(--amber); border: none;
+  border-radius: 6px; color: var(--bg);
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+}
+
+.modal-btn:hover { background: var(--amber2); }
+
+.modal-skip {
+  display: block; text-align: center; margin-top: 12px;
+  font-size: 11px; color: var(--text3); cursor: pointer;
+}
+
+.modal-skip:hover { color: var(--text2); }
+
+.modal-note { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- ══ API SETUP MODAL ══ -->
+<div id="api-modal">
+  <div class="modal-card">
+    <h2>NEXUS v2</h2>
+    <p>Self-Building AI Platform with visual agent builder, memory, dynamic tools, and file/image analysis.</p>
+
+    <div class="modal-note">Select AI Provider:</div>
+    <div class="provider-row" id="provider-row">
+      <button class="provider-chip sel" onclick="selectProvider('openrouter', this)">OpenRouter</button>
+      <button class="provider-chip" onclick="selectProvider('openai', this)">OpenAI</button>
+      <button class="provider-chip" onclick="selectProvider('groq', this)">Groq</button>
+      <button class="provider-chip" onclick="selectProvider('together', this)">Together</button>
+    </div>
+
+    <div class="modal-note">API Key (<a href="https://openrouter.ai/keys" target="_blank">Get one free →</a>):</div>
+    <input class="modal-input" id="api-key-in" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+    <button class="modal-btn" onclick="connectAPI()">CONNECT →</button>
+    <span class="modal-skip" onclick="skipModal()">Continue without API key (demo mode)</span>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo-block">
+    <div class="logo-icon">NX</div>
+    <div class="logo-text">NEXUS</div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('chat', this)">💬 Chat</button>
+    <button class="nav-tab" onclick="switchView('canvas', this)">⬡ Agent Canvas</button>
+    <button class="nav-tab" onclick="switchView('memory', this)">🧠 Memory</button>
+    <button class="nav-tab" onclick="switchView('tools', this)">🔧 Tools</button>
+    <button class="nav-tab" onclick="switchView('logs', this)">📋 Logs</button>
+  </div>
+  <div class="header-right">
+    <div class="ai-badge" id="ai-badge">
+      <span id="badge-provider">openrouter</span> /
+      <span id="badge-model">gemma-4-31b</span>
+    </div>
+    <div class="status-led" id="status-led"></div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Left icon sidebar -->
+  <div class="sidebar">
+    <button class="sidebar-icon-btn active" title="Chat" onclick="switchView('chat', null, this)">💬</button>
+    <button class="sidebar-icon-btn" title="Agent Canvas" onclick="switchView('canvas', null, this)">⬡</button>
+    <button class="sidebar-icon-btn" title="Agents" onclick="openDrawer('agents', this)">🤖<span class="badge" id="badge-agents">0</span></button>
+    <button class="sidebar-icon-btn" title="Memory" onclick="openDrawer('memory', this)">🧠</button>
+    <button class="sidebar-icon-btn" title="Tools" onclick="openDrawer('tools', this)">🔧</button>
+    <button class="sidebar-icon-btn" title="Logs" onclick="openDrawer('logs', this)">📋</button>
+    <div style="flex:1"></div>
+    <button class="sidebar-icon-btn" title="Settings" onclick="document.getElementById('api-modal').style.display='flex'">⚙️</button>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ── CHAT PANEL ── -->
+    <div class="panel active" id="panel-chat">
+      <div id="messages">
+        <div class="welcome" id="welcome">
+          <div class="welcome-logo">NEXUS</div>
+          <div class="welcome-sub">Self-Building AI Platform v2 · Visual Agent Builder</div>
+          <div class="quickstart-grid">
+            <div class="qs-card" onclick="sendPrompt('What is 9847 × 3621?')">
+              <div class="icon">🔢</div>
+              <div class="label">Exact math via calculator tool</div>
+            </div>
+            <div class="qs-card" onclick="sendPrompt('Build agent: Research a topic, summarise key points, and format a report')">
+              <div class="icon">⬡</div>
+              <div class="label">Auto-build multi-node agent</div>
+            </div>
+            <div class="qs-card" onclick="sendPrompt('Create a tool that sorts a list of numbers and test it with [5,3,8,1,9]')">
+              <div class="icon">🔧</div>
+              <div class="label">Dynamic tool creation</div>
+            </div>
+            <div class="qs-card" onclick="sendPrompt('Remember: I prefer TypeScript and functional programming')">
+              <div class="icon">🧠</div>
+              <div class="label">Long-term memory storage</div>
+            </div>
+            <div class="qs-card" onclick="switchView('canvas')">
+              <div class="icon">🗺️</div>
+              <div class="label">Open visual agent canvas</div>
+            </div>
+            <div class="qs-card" onclick="document.getElementById('file-input').click()">
+              <div class="icon">📎</div>
+              <div class="label">Upload image or PDF for analysis</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div class="input-area">
+        <div class="attachment-bar" id="attachment-bar"></div>
+        <div class="mode-bar">
+          <button class="mode-chip active" id="m-auto"  onclick="setMode('auto',this)">Auto</button>
+          <button class="mode-chip" id="m-chat"  onclick="setMode('chat',this)">Chat</button>
+          <button class="mode-chip" id="m-agent" onclick="setMode('agent',this)">Agent</button>
+          <span class="mode-hint" id="mode-hint">Auto-selects chat or agent</span>
+        </div>
+        <div class="input-row">
+          <input type="file" id="file-input" multiple accept="image/*,.pdf,.txt,.json,.csv" onchange="handleFiles(this.files)">
+          <textarea id="input-box" placeholder="Ask anything · upload files · or say 'build agent: [goal]'..." rows="1"></textarea>
+          <button class="btn-upload" onclick="document.getElementById('file-input').click()" title="Attach files">📎</button>
+          <button class="btn-send" id="send-btn" onclick="sendMessage()" title="Send (Enter)">➤</button>
+        </div>
+        <div class="input-hint">
+          <span><kbd>Enter</kbd> send</span>
+          <span><kbd>Shift+Enter</kbd> newline</span>
+          <span id="session-hint" style="margin-left:auto;opacity:0.4"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CANVAS PANEL ── -->
+    <div class="panel" id="panel-canvas" style="position:relative;">
+      <div class="canvas-toolbar">
+        <button class="canvas-btn" onclick="canvasZoom(1.15)">＋ Zoom</button>
+        <button class="canvas-btn" onclick="canvasZoom(0.87)">－ Zoom</button>
+        <button class="canvas-btn" onclick="canvasFit()">⊞ Fit</button>
+        <div class="canvas-sep"></div>
+        <button class="canvas-btn" onclick="canvasClear()">✕ Clear</button>
+        <button class="canvas-btn primary" onclick="promptBuildAgent()">⬡ Build Agent</button>
+      </div>
+
+      <svg id="workflow-canvas" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#383848"/>
+          </marker>
+          <marker id="arrowhead-active" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/>
+          </marker>
+        </defs>
+        <g id="canvas-root" transform="translate(0,0) scale(1)"></g>
+      </svg>
+
+      <!-- Empty canvas placeholder -->
+      <div class="canvas-empty" id="canvas-empty">
+        <div style="font-size:48px;opacity:0.15">⬡</div>
+        <p>No workflow loaded.<br>Click <strong>⬡ Build Agent</strong> above or type<br>"build agent: [your goal]" in the chat.</p>
+      </div>
+
+      <!-- Node detail panel -->
+      <div class="node-detail" id="node-detail">
+        <div class="nd-header">
+          <span class="nd-title" id="nd-title">Node Detail</span>
+          <button class="nd-close" onclick="closeNodeDetail()">×</button>
+        </div>
+        <div class="nd-body" id="nd-body"></div>
+      </div>
+    </div>
+
+    <!-- ── OTHER PANELS (memory/tools/logs as full panels) ── -->
+    <div class="panel" id="panel-memory">
+      <div class="drawer-header">🧠 Memory Store</div>
+      <div class="drawer-body" id="memory-list"><div style="color:var(--text3);font-size:11px;padding:20px;font-family:var(--mono)">No memories yet.</div></div>
+    </div>
+
+    <div class="panel" id="panel-tools">
+      <div class="drawer-header">🔧 Tool Registry</div>
+      <div class="drawer-body" id="tools-list"></div>
+    </div>
+
+    <div class="panel" id="panel-logs">
+      <div class="drawer-header">📋 Observability Log</div>
+      <div class="drawer-body" id="logs-list"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- RIGHT DRAWER (overlay) -->
+  <div class="right-drawer" id="right-drawer" style="display:none;">
+    <div class="drawer-header">
+      <span id="drawer-title">—</span>
+      <button onclick="closeDrawer()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;">×</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════
+// NEXUS CLIENT — complete frontend logic
+// ══════════════════════════════════════════════
+
+const SESSION_ID = 'nx_' + Math.random().toString(36).slice(2, 9);
+document.getElementById('session-hint').textContent = SESSION_ID;
+
+let ws = null;
+let apiKey = '';
+let provider = 'openrouter';
+let isProcessing = false;
+let pendingAttachments = []; // [{name, mime, type, data(base64)}]
+let mode = 'auto';
+let currentWorkflow = null;
+let canvasTransform = { x: 80, y: 80, scale: 1 };
+let isDraggingCanvas = false;
+let dragStart = null;
+let selectedNodeId = null;
+
+// ══ PROVIDER SELECT ══
+function selectProvider(p, btn) {
+  provider = p;
+  document.querySelectorAll('.provider-chip').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const placeholders = {
+    openrouter: 'sk-or-v1-...',
+    openai: 'sk-...',
+    groq: 'gsk_...',
+    together: 'your-together-key',
+  };
+  document.getElementById('api-key-in').placeholder = placeholders[p] || 'your-api-key';
+}
+
+function connectAPI() {
+  apiKey = document.getElementById('api-key-in').value.trim();
+  if (!apiKey) return alert('Please enter an API key');
+  document.getElementById('api-modal').style.display = 'none';
+  document.getElementById('badge-provider').textContent = provider;
+  initWS();
+  refreshData();
+}
+
+function skipModal() {
+  document.getElementById('api-modal').style.display = 'none';
+  initWS();
+  refreshData();
+}
+
+// ══ WEBSOCKET ══
+function initWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen    = () => setLED(true);
+  ws.onclose   = () => { setLED(false); setTimeout(initWS, 3000); };
+  ws.onerror   = () => setLED(false);
+  ws.onmessage = e  => onWSMessage(JSON.parse(e.data));
+}
+
+function onWSMessage(msg) {
+  switch (msg.type) {
+    case 'start':
+      removeTyping();
+      addTyping();
+      break;
+    case 'status':
+    case 'agent_build':
+      updateStatusMsg(msg.message);
+      break;
+    case 'progress':
+      updateStatusMsg(msg.message);
+      updateNodeRunning(msg.message);
+      break;
+    case 'plan':
+      renderPlanInChat(msg.plan);
+      break;
+    case 'workflow':
+      currentWorkflow = msg.workflow;
+      renderWorkflowCanvas(msg.workflow);
+      updateCanvasEmpty();
+      break;
+    case 'done':
+      removeTyping();
+      addMsg('assistant', msg.result.content);
+      setProcessing(false);
+      refreshData();
+      break;
+    case 'error':
+      removeTyping();
+      addMsg('system', '⚠ ' + msg.message);
+      setProcessing(false);
+      break;
+  }
+}
+
+// ══ SEND ══
+function sendMessage() {
+  const box = document.getElementById('input-box');
+  const text = box.value.trim();
+  if (!text || isProcessing) return;
+
+  hideWelcome();
+  box.value = ''; box.style.height = 'auto';
+
+  // Show user message with attachment chips
+  addMsgWithAttachments('user', text, pendingAttachments);
+  setProcessing(true);
+
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    addMsg('system', '⚠ Not connected');
+    setProcessing(false);
+    return;
+  }
+
+  ws.send(JSON.stringify({
+    type: 'chat',
+    input: text,
+    sessionId: SESSION_ID,
+    apiKey,
+    attachments: pendingAttachments,
+  }));
+
+  pendingAttachments = [];
+  document.getElementById('attachment-bar').innerHTML = '';
+}
+
+function sendPrompt(text) {
+  hideWelcome();
+  document.getElementById('input-box').value = text;
+  sendMessage();
+}
+
+// ══ FILE HANDLING — BASE64 UPLOAD ══
+async function handleFiles(files) {
+  for (const file of Array.from(files)) {
+    const fd = new FormData();
+    fd.append('files', file);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      (data.files || []).forEach(f => {
+        pendingAttachments.push(f);
+        renderAttPreview(f);
+      });
+    } catch (e) {
+      addMsg('system', `⚠ Upload failed: ${e.message}`);
+    }
+  }
+  document.getElementById('file-input').value = '';
+}
+
+function renderAttPreview(f) {
+  const bar = document.getElementById('attachment-bar');
+  const el = document.createElement('div');
+  el.className = 'att-preview';
+  el.dataset.name = f.name;
+
+  let inner = '';
+  if (f.type === 'image') {
+    inner = `<img src="data:${f.mime};base64,${f.data}" alt="${f.name}">`;
+  } else {
+    inner = '📄';
+  }
+
+  el.innerHTML = `${inner}<span>${f.name}</span><button class="att-remove" onclick="removeAtt('${f.name}', this.parentElement)">×</button>`;
+  bar.appendChild(el);
+}
+
+function removeAtt(name, el) {
+  pendingAttachments = pendingAttachments.filter(a => a.name !== name);
+  el.remove();
+}
+
+// ══ MESSAGE RENDERING ══
+function addMsg(role, content) {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = `msg ${role}`;
+  const av = role === 'user' ? 'U' : role === 'assistant' ? 'NX' : '·';
+  const meta = role === 'user' ? 'YOU' : role === 'assistant' ? 'NEXUS' : 'SYS';
+  el.innerHTML = `
+    <div class="msg-av">${av}</div>
+    <div class="msg-body">
+      <div class="msg-meta">${meta} · ${new Date().toLocaleTimeString()}</div>
+      <div class="msg-content">${esc(content)}</div>
+    </div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+function addMsgWithAttachments(role, content, atts) {
+  const el = addMsg(role, content);
+  if (atts.length) {
+    const body = el.querySelector('.msg-body');
+    const bar = document.createElement('div');
+    bar.className = 'msg-attachments';
+    atts.forEach(a => {
+      const chip = document.createElement('div');
+      chip.className = 'att-chip';
+      chip.innerHTML = `${a.type === 'image' ? '🖼️' : '📄'} ${esc(a.name)}`;
+      bar.appendChild(chip);
+    });
+    body.appendChild(bar);
+  }
+}
+
+function renderPlanInChat(plan) {
+  const tasks = plan.tasks || [];
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'msg assistant';
+  el.innerHTML = `
+    <div class="msg-av">NX</div>
+    <div class="msg-body">
+      <div class="msg-meta">NEXUS · TASK PLAN · ${tasks.length} nodes</div>
+      <div class="plan-card">
+        <div class="plan-title">⬡ EXECUTION DAG</div>
+        ${tasks.map(t => `
+          <div class="plan-node" id="pn-${t.id}">
+            <div class="plan-node-id">${t.id}</div>
+            <div class="plan-node-dot pending" id="pd-${t.id}"></div>
+            <div>${esc(t.name)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function updateNodeRunning(msg) {
+  // Highlight running node in plan display
+  const m = msg.match(/Executing:\s*(.+)/);
+  if (!m) return;
+  const name = m[1].trim();
+  document.querySelectorAll('.plan-node-dot').forEach(d => {
+    const row = d.closest('.plan-node');
+    if (row?.textContent.includes(name)) {
+      d.className = 'plan-node-dot running';
+    } else if (d.className.includes('running')) {
+      d.className = 'plan-node-dot done';
+    }
+  });
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'msg assistant'; el.id = 'typing-el';
+  el.innerHTML = `
+    <div class="msg-av">NX</div>
+    <div class="msg-body">
+      <div class="typing">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() { document.getElementById('typing-el')?.remove(); }
+
+// ══ CANVAS ══
+function renderWorkflowCanvas(workflow) {
+  const root = document.getElementById('canvas-root');
+  root.innerHTML = '';
+
+  const tasks = workflow.tasks || [];
+  if (!tasks.length) return;
+
+  // Layout: auto-position nodes in a horizontal flow with branching
+  const nodeW = 180, nodeH = 70, hGap = 80, vGap = 50;
+  const positions = {};
+  const layers = buildLayers(tasks);
+
+  layers.forEach((layer, li) => {
+    layer.forEach((task, ti) => {
+      const totalH = layer.length * (nodeH + vGap) - vGap;
+      const startY = (500 - totalH) / 2;
+      positions[task.id] = {
+        x: li * (nodeW + hGap),
+        y: startY + ti * (nodeH + vGap),
+      };
+    });
+  });
+
+  // Draw edges first
+  tasks.forEach(task => {
+    (task.depends_on || []).forEach(depId => {
+      const from = positions[depId];
+      const to   = positions[task.id];
+      if (!from || !to) return;
+      const x1 = from.x + nodeW, y1 = from.y + nodeH / 2;
+      const x2 = to.x, y2 = to.y + nodeH / 2;
+      const cx = (x1 + x2) / 2;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
+      path.setAttribute('class', 'wf-edge');
+      path.setAttribute('id', `edge-${depId}-${task.id}`);
+      root.appendChild(path);
+    });
+  });
+
+  // Draw nodes
+  tasks.forEach(task => {
+    const pos = positions[task.id] || { x: 0, y: 0 };
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'wf-node pending');
+    g.setAttribute('id', `node-${task.id}`);
+    g.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+    g.addEventListener('click', () => openNodeDetail(task));
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', nodeW); rect.setAttribute('height', nodeH);
+    rect.setAttribute('rx', 8);
+
+    const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    titleEl.setAttribute('class', 'node-title');
+    titleEl.setAttribute('x', 12); titleEl.setAttribute('y', 28);
+    titleEl.textContent = (task.name || task.id).slice(0, 22);
+
+    const subEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    subEl.setAttribute('class', 'node-sub');
+    subEl.setAttribute('x', 12); subEl.setAttribute('y', 46);
+    subEl.textContent = (task.description || '').slice(0, 30);
+
+    const idEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    idEl.setAttribute('class', 'node-id-badge');
+    idEl.setAttribute('x', nodeW - 6); idEl.setAttribute('y', 14);
+    idEl.setAttribute('text-anchor', 'end');
+    idEl.textContent = task.id;
+
+    // Tool indicator dot
+    if (task.needs_tool) {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', nodeW - 10); dot.setAttribute('cy', nodeH - 12);
+      dot.setAttribute('r', 4); dot.setAttribute('fill', '#f59e0b');
+      dot.setAttribute('opacity', '0.8');
+      g.appendChild(dot);
+    }
+
+    g.appendChild(rect);
+    g.appendChild(titleEl);
+    g.appendChild(subEl);
+    g.appendChild(idEl);
+    root.appendChild(g);
+  });
+
+  // Auto-fit
+  const bbox = root.getBBox();
+  const svgEl = document.getElementById('workflow-canvas');
+  const vw = svgEl.clientWidth || 800;
+  const vh = svgEl.clientHeight || 600;
+  const scaleX = (vw - 120) / (bbox.width || 1);
+  const scaleY = (vh - 120) / (bbox.height || 1);
+  const scale = Math.min(scaleX, scaleY, 1.2);
+  const tx = (vw - bbox.width * scale) / 2 - bbox.x * scale;
+  const ty = (vh - bbox.height * scale) / 2 - bbox.y * scale;
+  canvasTransform = { x: tx, y: ty, scale };
+  applyCanvasTransform();
+}
+
+function buildLayers(tasks) {
+  // Topological sort into layers
+  const inDeg = {};
+  const adj = {};
+  tasks.forEach(t => { inDeg[t.id] = 0; adj[t.id] = []; });
+  tasks.forEach(t => (t.depends_on || []).forEach(d => { inDeg[t.id]++; adj[d]?.push(t.id); }));
+
+  const layers = [];
+  let current = tasks.filter(t => inDeg[t.id] === 0);
+
+  while (current.length) {
+    layers.push(current);
+    const next = [];
+    current.forEach(t => (adj[t.id] || []).forEach(nid => {
+      inDeg[nid]--;
+      if (inDeg[nid] === 0) {
+        const task = tasks.find(x => x.id === nid);
+        if (task) next.push(task);
+      }
+    }));
+    current = next;
+  }
+
+  return layers;
+}
+
+// Canvas pan/zoom
+const svgEl = document.getElementById('workflow-canvas');
+
+svgEl.addEventListener('mousedown', e => {
+  if (e.target === svgEl || e.target.closest('#canvas-root') === document.getElementById('canvas-root')) {
+    isDraggingCanvas = true;
+    dragStart = { mx: e.clientX, my: e.clientY, tx: canvasTransform.x, ty: canvasTransform.y };
+  }
+});
+
+window.addEventListener('mousemove', e => {
+  if (!isDraggingCanvas) return;
+  canvasTransform.x = dragStart.tx + (e.clientX - dragStart.mx);
+  canvasTransform.y = dragStart.ty + (e.clientY - dragStart.my);
+  applyCanvasTransform();
+});
+
+window.addEventListener('mouseup', () => { isDraggingCanvas = false; });
+
+svgEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.11;
+  canvasTransform.scale = Math.max(0.2, Math.min(3, canvasTransform.scale * delta));
+  applyCanvasTransform();
+}, { passive: false });
+
+function applyCanvasTransform() {
+  document.getElementById('canvas-root').setAttribute(
+    'transform', `translate(${canvasTransform.x},${canvasTransform.y}) scale(${canvasTransform.scale})`
+  );
+}
+
+function canvasZoom(factor) {
+  canvasTransform.scale = Math.max(0.2, Math.min(3, canvasTransform.scale * factor));
+  applyCanvasTransform();
+}
+
+function canvasFit() {
+  if (currentWorkflow) renderWorkflowCanvas(currentWorkflow);
+}
+
+function canvasClear() {
+  document.getElementById('canvas-root').innerHTML = '';
+  currentWorkflow = null;
+  updateCanvasEmpty();
+}
+
+function updateCanvasEmpty() {
+  const empty = document.getElementById('canvas-empty');
+  const root = document.getElementById('canvas-root');
+  empty.style.display = (root.children.length === 0) ? 'flex' : 'none';
+}
+
+function promptBuildAgent() {
+  const goal = prompt('Enter agent goal:\nExample: "Research a topic, extract key facts, format a structured report"');
+  if (!goal) return;
+  switchView('chat');
+  sendPrompt(`Build agent: ${goal}`);
+}
+
+// Node detail panel
+function openNodeDetail(task) {
+  const panel = document.getElementById('node-detail');
+  document.getElementById('nd-title').textContent = task.name || task.id;
+
+  const body = document.getElementById('nd-body');
+  body.innerHTML = `
+    <div class="nd-section">
+      <div class="nd-section-title">Task Info</div>
+      <div class="nd-field"><label>ID</label><pre>${task.id}</pre></div>
+      <div class="nd-field"><label>Description</label><pre>${esc(task.description || '')}</pre></div>
+      ${task.depends_on?.length ? `<div class="nd-field"><label>Depends On</label><pre>${task.depends_on.join(', ')}</pre></div>` : ''}
+    </div>
+    ${task.nodePrompt ? `
+    <div class="nd-section">
+      <div class="nd-section-title">Generated Prompt</div>
+      <div class="nd-field"><label>System Prompt</label><pre>${esc(task.nodePrompt.system_prompt || '')}</pre></div>
+      <div class="nd-field"><label>User Template</label><pre>${esc(task.nodePrompt.user_prompt_template || '')}</pre></div>
+      <div class="nd-field"><label>Output Format</label><pre>${esc(task.nodePrompt.output_format || '')}</pre></div>
+    </div>` : ''}
+    ${task.nodeFunction ? `
+    <div class="nd-section">
+      <div class="nd-section-title">Generated Function</div>
+      <div class="nd-field"><label>Name</label><pre>${esc(task.nodeFunction.function_name || '')}</pre></div>
+      <div class="nd-field"><label>Code</label><pre>${esc((task.nodeFunction.code || '').slice(0, 500))}</pre></div>
+    </div>` : ''}
+    ${task.schemaValidation ? `
+    <div class="nd-section">
+      <div class="nd-section-title">Schema Validation</div>
+      <div class="nd-field"><pre style="color:${task.schemaValidation.valid ? 'var(--green)' : 'var(--red)'}">
+Valid: ${task.schemaValidation.valid}
+Issues: ${JSON.stringify(task.schemaValidation.issues || [])}</pre></div>
+    </div>` : ''}
+    <div class="nd-section">
+      <div class="nd-section-title">Schemas</div>
+      <div class="nd-field"><label>Input Schema</label><pre>${JSON.stringify(task.input_schema || {}, null, 2)}</pre></div>
+      <div class="nd-field"><label>Output Schema</label><pre>${JSON.stringify(task.output_schema || {}, null, 2)}</pre></div>
+    </div>`;
+
+  panel.classList.add('open');
+  selectedNodeId = task.id;
+
+  // Highlight in canvas
+  document.querySelectorAll('.wf-node').forEach(n => n.classList.remove('selected'));
+  document.getElementById(`node-${task.id}`)?.classList.add('selected');
+}
+
+function closeNodeDetail() {
+  document.getElementById('node-detail').classList.remove('open');
+  document.querySelectorAll('.wf-node').forEach(n => n.classList.remove('selected'));
+}
+
+// ══ VIEW SWITCHING ══
+function switchView(view, navBtn = null, iconBtn = null) {
+  // Update nav tabs
+  if (navBtn) {
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    navBtn.classList.add('active');
+  }
+  if (iconBtn) {
+    document.querySelectorAll('.sidebar-icon-btn').forEach(b => b.classList.remove('active'));
+    iconBtn.classList.add('active');
+  }
+
+  // Show correct panel
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById(`panel-${view}`);
+  if (target) target.classList.add('active');
+
+  if (view === 'canvas') updateCanvasEmpty();
+}
+
+// Right drawer
+function openDrawer(section, btn) {
+  const drawer = document.getElementById('right-drawer');
+  const title = document.getElementById('drawer-title');
+  const body = document.getElementById('drawer-body');
+  drawer.style.display = 'flex';
+  title.textContent = { agents: '🤖 Agents', memory: '🧠 Memory', tools: '🔧 Tools', logs: '📋 Logs' }[section];
+  refreshDrawer(section, body);
+}
+
+function closeDrawer() {
+  document.getElementById('right-drawer').style.display = 'none';
+}
+
+function refreshDrawer(section, body) {
+  if (!body) return;
+  body.innerHTML = '<div style="color:var(--text3);font-family:var(--mono);font-size:11px;padding:20px">Loading...</div>';
+
+  const endpoints = { agents: '/api/agents', memory: '/api/memory', tools: '/api/tools', logs: '/api/logs' };
+  fetch(endpoints[section])
+    .then(r => r.json())
+    .then(data => {
+      body.innerHTML = '';
+      if (section === 'memory') renderMemoryItems(data, body);
+      else if (section === 'tools') renderToolItems(data, body);
+      else if (section === 'agents') renderAgentItems(data, body);
+      else if (section === 'logs') renderLogItems(data, body);
+    })
+    .catch(e => { body.innerHTML = `<div style="color:var(--red);font-size:11px;font-family:var(--mono);padding:12px">Error: ${e.message}</div>`; });
+}
+
+// ══ DATA RENDERING ══
+function renderMemoryItems(items, container) {
+  if (!items.length) { container.innerHTML = '<div class="panel-empty" style="color:var(--text3);font-size:11px;font-family:var(--mono);padding:20px">No memories stored.</div>'; return; }
+  items.slice().reverse().slice(0, 40).forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'dcard';
+    el.innerHTML = `
+      <div class="dcard-label">${m.type}</div>
+      <div class="dcard-value">${esc(m.value)}</div>
+      <div class="dcard-meta">conf: ${(m.confidence * 100).toFixed(0)}%</div>
+      <div class="dcard-bar"><div class="dcard-bar-fill" style="width:${(m.confidence*100).toFixed(0)}%"></div></div>`;
+    container.appendChild(el);
+  });
+}
+
+function renderToolItems(items, container) {
+  if (!items.length) { container.innerHTML = '<div style="color:var(--text3);font-size:11px;font-family:var(--mono);padding:20px">No tools registered.</div>'; return; }
+  items.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'dcard';
+    el.innerHTML = `
+      <div class="dcard-label" style="color:var(--green)">${esc(t.name)}</div>
+      <div class="dcard-value">${esc(t.description || '')}</div>
+      <div class="dcard-meta">uses: ${t.usage_count ?? 0}</div>
+      <span class="tool-badge ${t.created_by === 'ai' ? '' : 'builtin'}">${t.created_by === 'ai' ? 'AI CREATED' : 'BUILT-IN'}</span>`;
+    container.appendChild(el);
+  });
+}
+
+function renderAgentItems(items, container) {
+  if (!items.length) { container.innerHTML = '<div style="color:var(--text3);font-size:11px;font-family:var(--mono);padding:20px">No agents saved yet.<br>Say "build agent: [goal]" to create one.</div>'; return; }
+  items.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'agent-card';
+    el.innerHTML = `
+      <div class="agent-name">${esc(a.agent_name)}</div>
+      <div class="agent-desc">${esc(a.description || '')}</div>
+      <div class="agent-nodes">${a.workflow?.tasks?.length || 0} nodes · ${new Date(a.created_at).toLocaleDateString()}</div>
+      <button class="run-agent-btn" onclick="loadAgent('${a.intent_hash}')">⬡ View on Canvas</button>`;
+    container.appendChild(el);
+  });
+  document.getElementById('badge-agents').textContent = items.length;
+}
+
+function renderLogItems(items, container) {
+  items.slice(-80).reverse().forEach(l => {
+    const el = document.createElement('div');
+    const cls = l.event.startsWith('ai_') ? 'ai' : l.event.includes('tool') ? 'tool' : l.event.includes('agent') ? 'agent' : l.event.includes('error') || l.event.includes('failed') ? 'error' : '';
+    el.className = `log-row ${cls}`;
+    el.textContent = `${l.ts.slice(11,19)} ${l.event}`;
+    container.appendChild(el);
+  });
+}
+
+function loadAgent(hash) {
+  fetch('/api/agents')
+    .then(r => r.json())
+    .then(agents => {
+      const agent = agents.find(a => a.intent_hash === hash);
+      if (agent?.workflow) {
+        currentWorkflow = agent.workflow;
+        switchView('canvas');
+        setTimeout(() => { renderWorkflowCanvas(agent.workflow); updateCanvasEmpty(); }, 100);
+      }
+    });
+}
+
+// ══ REFRESH DATA ══
+async function refreshData() {
+  try {
+    const [mems, tools, agents] = await Promise.all([
+      fetch('/api/memory').then(r => r.json()),
+      fetch('/api/tools').then(r => r.json()),
+      fetch('/api/agents').then(r => r.json()),
+    ]);
+
+    // Update full-page panels
+    const memPanel = document.getElementById('memory-list');
+    if (memPanel) { memPanel.innerHTML = ''; renderMemoryItems(mems, memPanel); }
+
+    const toolPanel = document.getElementById('tools-list');
+    if (toolPanel) { toolPanel.innerHTML = ''; renderToolItems(tools, toolPanel); }
+
+    document.getElementById('badge-agents').textContent = agents.length;
+
+    // Update active drawer if open
+    const drawer = document.getElementById('right-drawer');
+    if (drawer.style.display !== 'none') {
+      const title = document.getElementById('drawer-title').textContent;
+      const body = document.getElementById('drawer-body');
+      if (title.includes('Memory'))  renderMemoryItems(mems, body);
+      if (title.includes('Tools'))   renderToolItems(tools, body);
+      if (title.includes('Agents'))  renderAgentItems(agents, body);
+    }
+  } catch {}
+}
+
+// ══ UTILS ══
+function setProcessing(v) {
+  isProcessing = v;
+  document.getElementById('send-btn').disabled = v;
+}
+
+function setLED(ok) {
+  const led = document.getElementById('status-led');
+  led.style.background = ok ? 'var(--green)' : 'var(--red)';
+  led.style.boxShadow = ok ? '0 0 6px var(--green)' : '0 0 6px var(--red)';
+}
+
+function updateStatusMsg(msg) {
+  // Show as a system-like indicator at bottom of chat
+  const existing = document.getElementById('status-msg');
+  if (existing) { existing.querySelector('.msg-content').textContent = msg; return; }
+
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'msg system'; el.id = 'status-msg';
+  el.innerHTML = `<div class="msg-av">·</div><div class="msg-body"><div class="msg-content">${esc(msg)}</div></div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function hideWelcome() { document.getElementById('welcome')?.remove(); document.getElementById('status-msg')?.remove(); }
+
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.mode-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const hints = { auto: 'Auto-selects chat or agent', chat: 'Direct response', agent: 'Full DAG planning & execution' };
+  document.getElementById('mode-hint').textContent = hints[m];
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══ INPUT ══
+const inputBox = document.getElementById('input-box');
+inputBox.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+});
+inputBox.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ══ INIT ══
+setInterval(refreshData, 12000);
+updateCanvasEmpty();
+</script>
+</body>
+</html>
